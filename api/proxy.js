@@ -55,10 +55,19 @@ export default async function handler(req, res) {
 
     console.log("Supabase response status:", supabaseResponse.status);
 
-    const data = await supabaseResponse.json();
-    console.log("Supabase response data:", data);
+    // FIX: Only parse JSON if there's a response body
+    let data = null;
+    const text = await supabaseResponse.text();
 
-    res.status(supabaseResponse.status).json(data);
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch (e) {
+      console.warn("Could not parse Supabase response as JSON:", e.message);
+      data = text;
+    }
+
+    console.log("Supabase response data:", data);
+    res.status(supabaseResponse.status).json({ result: data });
   } catch (error) {
     console.error("Proxy failed with error:", error.message);
     res.status(500).json({ error: "Proxy failed", details: error.message });
