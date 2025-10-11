@@ -29,7 +29,7 @@ export default async function handler(req, res) {
         Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(parsedBody),
+      body: JSON.stringify({ text: "Hello from Vercel" }),
     });
 
     const data = await supabaseResponse.json();
