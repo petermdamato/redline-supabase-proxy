@@ -1,3 +1,5 @@
+import { parseStringPromise } from "xml2js";
+
 export default async function handler(req, res) {
   console.log("=== New Request Received ===");
   console.log("Request method:", req.method);
@@ -16,22 +18,20 @@ export default async function handler(req, res) {
     }
     body = Buffer.concat(chunks).toString();
 
-    console.log("Raw request body:", body);
+    console.log("Raw request body (XML):", body);
 
     if (!body) {
       console.error("Empty request body");
       return res.status(400).json({ error: "Empty request body" });
     }
 
-    let parsedBody;
-    try {
-      parsedBody = JSON.parse(body);
-      console.log("Parsed request body:", parsedBody);
-    } catch (parseError) {
-      console.error("JSON parse error:", parseError.message);
-      return res.status(400).json({ error: "Invalid JSON in request body" });
-    }
+    // Store the raw XML string directly
+    const record = {
+      xml_data: body, // Store the raw XML string
+      received_at: new Date().toISOString(),
+    };
 
+    // Send to Supabase
     const SUPABASE_URL =
       "https://gazxtyurtygfcsydesxx.supabase.co/rest/v1/test";
     const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
@@ -41,7 +41,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Missing Supabase anon key" });
     }
 
-    console.log("Forwarding request to Supabase...");
+    console.log("Storing raw XML data in Supabase");
 
     const supabaseResponse = await fetch(SUPABASE_URL, {
       method: "POST",
@@ -49,27 +49,27 @@ export default async function handler(req, res) {
         apikey: SUPABASE_ANON_KEY,
         Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
         "Content-Type": "application/json",
+        Prefer: "return=representation",
       },
-      body: JSON.stringify(parsedBody),
+      body: JSON.stringify(record),
     });
 
-    console.log("Supabase response status:", supabaseResponse.status);
-
-    // FIX: Only parse JSON if there's a response body
-    let data = null;
     const text = await supabaseResponse.text();
+    let data;
 
     try {
       data = text ? JSON.parse(text) : null;
     } catch (e) {
-      console.warn("Could not parse Supabase response as JSON:", e.message);
+      console.warn("Supabase response is not JSON:", e.message);
       data = text;
     }
 
-    console.log("Supabase response data:", data);
+    console.log("Supabase response:", data);
     res.status(supabaseResponse.status).json({ result: data });
   } catch (error) {
-    console.error("Proxy failed with error:", error.message);
-    res.status(500).json({ error: "Proxy failed", details: error.message });
+    console.error("Handler error:", error.message);
+    res
+      .status(500)
+      .json({ error: "Internal server error", details: error.message });
   }
 }
