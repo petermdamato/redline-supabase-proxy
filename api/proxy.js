@@ -25,10 +25,9 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Empty request body" });
     }
 
-    // Store the raw XML string directly
+    // Store ONLY the raw XML string - no additional fields
     const record = {
-      xml_data: body, // Store the raw XML string
-      received_at: new Date().toISOString(),
+      text: body, // Store the raw XML string as "text" field
     };
 
     // Send to Supabase
@@ -41,7 +40,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Missing Supabase anon key" });
     }
 
-    console.log("Storing raw XML data in Supabase");
+    console.log("Storing raw XML data in Supabase as text field");
 
     const supabaseResponse = await fetch(SUPABASE_URL, {
       method: "POST",
@@ -65,7 +64,19 @@ export default async function handler(req, res) {
     }
 
     console.log("Supabase response:", data);
-    res.status(supabaseResponse.status).json({ result: data });
+
+    if (supabaseResponse.ok) {
+      res.status(200).json({
+        success: true,
+        message: "XML stored successfully",
+        result: data,
+      });
+    } else {
+      res.status(supabaseResponse.status).json({
+        error: "Failed to store in Supabase",
+        details: data,
+      });
+    }
   } catch (error) {
     console.error("Handler error:", error.message);
     res
