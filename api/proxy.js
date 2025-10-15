@@ -1,4 +1,4 @@
-import { parseStringPromise } from "xml2js";
+import moment from "moment";
 
 export default async function handler(req, res) {
   console.log("=== New Request Received ===");
@@ -27,7 +27,8 @@ export default async function handler(req, res) {
 
     // Store ONLY the raw XML string - no additional fields
     const record = {
-      text: body, // Store the raw XML string as "text" field
+      text: body,
+      dateCreated: moment().format("YYYY-DD-MM"),
     };
 
     // Send to Supabase
